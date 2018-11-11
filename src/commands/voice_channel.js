@@ -17,7 +17,7 @@ const detector = new Detector({
     audioGain: 1.0
 });
 
-const API_KEY = "NH2GTQBYVSILZFIOK34RQJXW44D7XZTY";
+const API_KEY = "replace";
 const CONTENT_TYPE = "audio/raw;encoding=signed-integer;bits=32;rate=44000;endian=little";
  
 function join(client, member, channel, commandArgs) {
