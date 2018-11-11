@@ -1,8 +1,9 @@
 const Discord = require('discord.js');
 const CommandParser = require('./parser.js');
 const client = new Discord.Client();
+const config = require('../config.json');
 
-client.login("replace");
+client.login(config.discordKey);
 
 client.on('ready', () => {
 	console.log(`Logged in as ${client.user.tag}!`);

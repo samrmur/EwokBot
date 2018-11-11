@@ -1,3 +1,4 @@
 node_modules/
 resources/recordings/*
+config.json
 !resources/recordings/README.md

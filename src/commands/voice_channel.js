@@ -2,6 +2,7 @@ const Detector = require('snowboy').Detector;
 const Models = require('snowboy').Models;
 const WitSpeech = require('node-witai-speech');
 const fs = require('fs');
+const config = require('../../config.json');
 
 const models = new Models();
 
@@ -17,7 +18,7 @@ const detector = new Detector({
     audioGain: 1.0
 });
 
-const API_KEY = "replace";
+const API_KEY = config.witKey;
 const CONTENT_TYPE = "audio/raw;encoding=signed-integer;bits=32;rate=44000;endian=little";
  
 function join(client, member, channel, commandArgs) {
