@@ -24,31 +24,44 @@ const CONTENT_TYPE = "audio/raw;encoding=signed-integer;bits=32;rate=44000;endia
 function join(client, member, channel, commandArgs) {
 	if (commandArgs != null) {
 		const voiceChannels = member.guild.channels.filter(channel => channel.type === "voice");
-		const voiceChannel = voiceChannels.find(channel => channel.name === commandArgs[0]);
+		const voiceChannel = voiceChannels.find(channel => channel.name.toLowerCase() === commandArgs[0].toLowerCase());
 		
-		if (voiceChannel === null)
-			channel.send(`${member.displayName}, the channel ${commandArgs[0]} does not exist!`)
-				.then(message => console.log(`Sent message: ${message.content}`))
-				.catch(console.error);
-		else
+		if (voiceChannel === null) {
+			if (channel !== null) {
+				channel.send(`${member.displayName}, the channel ${commandArgs[0]} does not exist!`)
+					.then(message => console.log(`Sent message: ${message.content}`))
+					.catch(console.error);
+			} else {
+				member.send(`${member.displayName}, the channel ${commandArgs[0]} does not exist!`)
+					.then(message => console.log(`Sent message: ${message.content}`))
+					.catch(console.error);
+			}
+		} else {
 			voiceChannel.join()
 				.then(connection => {
 					console.log(`Joined Channel: ${connection.channel.name}`);
-					listen(connection);
+					listen(client, connection);
 				})
 				.catch(console.error);
+		}
 	} else {
 		const voiceChannel = member.voiceChannel;
 		
-		if (voiceChannel === undefined)
-			channel.send(`${member.displayName}, please join a voice channel first!`)
-				.then(message => console.log(`Sent message: ${message.content}`))
-				.catch(console.error);
-		else {
+		if (voiceChannel === undefined) {
+			if (channel !== null) {
+				channel.send(`${member.displayName}, please join a voice channel first!`)
+					.then(message => console.log(`Sent message: ${message.content}`))
+					.catch(console.error);
+			} else {
+				member.send(`${member.displayName}, please join a voice channel first!`)
+					.then(message => console.log(`Sent message: ${message.content}`))
+					.catch(console.error);
+			}
+		} else {
 			voiceChannel.join()
 				.then(connection => {
 					console.log(`Joined Channel: ${connection.channel.name}`);
-					listen(connection);
+					listen(client, connection);
 				})
 				.catch(console.error);
 		}
@@ -69,7 +82,7 @@ function leave(client, member, channel) {
 	}
 }
 
-function listen(connection) {
+function listen(client, connection) {
 	// Discord doesn't allow bot to listen unless it plays audio, temporary fix until update
 	connection.playFile('resources/slient.wav', {
 		  volume: 0.1,
@@ -102,14 +115,14 @@ function listen(connection) {
 					detector.removeListener("hotword", callback)
 				else {
 					write.end();
-					speechToText(write.path);
+					speechToText(write.path, client, connection.channel.guild.members.get(user.id));
 				}
 			});
 		}
 	});
 }
 
-function speechToText(path) {
+function speechToText(path, client, member) {
 	const stream = fs.createReadStream(path);
 	
 	const parseSpeech =  new Promise((ressolve, reject) => {
@@ -121,11 +134,32 @@ function speechToText(path) {
 	});
 	
 	parseSpeech.then((data) => {
-		console.log(data);
+		getIntent(client, member, data);
 	})
 	.catch((err) => {
 		console.log(err);
 	});
+	
+	try {
+		fs.unlinkSync(stream.path);
+	} catch (err) {
+		console.log(`Failed to delete file: ${stream.path}`);
+	}
+}
+
+function getIntent(client, member, obj) {
+	const intent = obj.entities.intent[0].value;
+	
+	if (intent.toLowerCase() === "leave")
+		leave(client, member)
+	else if (intent.toLowerCase() === "join") {
+		const args = obj._text.split(" ");
+		
+		if (args.length > 1)
+			join(client, member, null, args.slice(1));
+		else
+			join(client, member, null, null);
+	}
 }
 
 module.exports = { join, leave };
