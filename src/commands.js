@@ -1,10 +1,12 @@
 const Detector = require('snowboy').Detector;
 const Models = require('snowboy').Models;
+const tts = require('@google-cloud/text-to-speech')
 const WitSpeech = require('node-witai-speech');
 const fs = require('fs');
-const config = require('../../config.json');
+const config = require('../config.json');
 
 const models = new Models();
+const ttsClient = new tts.TextToSpeechClient();
 
 models.add({
     file: 'resources/ewok.pmdl',
@@ -32,9 +34,15 @@ function join(client, member, channel, commandArgs) {
 					.then(message => console.log(`Sent message: ${message.content}`))
 					.catch(console.error);
 			} else {
-				member.send(`${member.displayName}, the channel ${commandArgs[0]} does not exist!`)
-					.then(message => console.log(`Sent message: ${message.content}`))
-					.catch(console.error);
+				const voiceConnection = member.guild.voiceConnection;
+				
+				if (voiceConnection === undefined) {
+					member.send(`${member.displayName}, the channel ${commandArgs[0]} does not exist!`)
+						.then(message => console.log(`Sent message: ${message.content}`))
+						.catch(console.error);
+				} else {
+					playTTS(voiceConnection, `${member.displayName}, the channel ${commandArgs[0]} does not exist!`);
+				}
 			}
 		} else {
 			voiceChannel.join()
@@ -84,7 +92,7 @@ function leave(client, member, channel) {
 
 function listen(client, connection) {
 	// Discord doesn't allow bot to listen unless it plays audio, temporary fix until update
-	connection.playFile('resources/slient.wav', {
+	connection.playFile("resources/silent.wav", {
 		  volume: 0.1,
 		  passes: 1
 	});
@@ -141,9 +149,9 @@ function speechToText(path, client, member) {
 	});
 	
 	try {
-		fs.unlinkSync(stream.path);
+		fs.unlinkSync(path);
 	} catch (err) {
-		console.log(`Failed to delete file: ${stream.path}`);
+		console.log(`Failed to delete file: ${path}`);
 	}
 }
 
@@ -160,6 +168,39 @@ function getIntent(client, member, obj) {
 		else
 			join(client, member, null, null);
 	}
+}
+
+function playTTS(connection, input) {
+	const request = {
+		input: {text: input},
+		voice: {languageCode: 'en-US', ssmlGender: 'NEUTRAL'},
+		audioConfig: {audioEncoding: 'LINEAR16'}
+	};
+	
+	ttsClient.synthesizeSpeech(request, (err, response) => {
+		if (err) {
+			console.log(err);
+			return;
+		}
+		
+		const path = `./resources/recordings/speech_${connection.channel.id}_${Date.now()}.wav`;
+		
+		fs.writeFile(path, response.audioContent, 'binary', err => {
+			if (err) {
+				console.log(err);
+				return;
+			}
+		});
+		
+		const dispatcher = connection.playFile(path);
+		dispatcher.on("end", (reason) => {
+			try {
+				fs.unlinkSync(path);
+			} catch (err) {
+				console.log(`Failed to delete file: ${stream.path}`);
+			}
+		});
+	});
 }
 
 module.exports = { join, leave };

@@ -1,4 +1,4 @@
-const VoiceChannel = require("./commands/voice.js");
+const VoiceChannel = require("./commands.js");
 
 function parseCommand(client, member, channel, fullCommand) {
 	let commandArray = fullCommand.split(" ");
